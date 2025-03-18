@@ -6,11 +6,11 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 
-# === 1. Download Historical Stock Data ===
+#download historical stock data
 symbol = 'AAPL'
-data = yf.download(symbol, start='2020-01-01', end='2024-01-01')
+data = yf.download(symbol, start='2020-01-01', end='2025-03-14')
 
-# === 2. Compute RSI ===
+#compute RSI
 def compute_rsi(prices, window=14):
     delta = np.diff(prices)
     gain = np.maximum(delta, 0)
@@ -22,20 +22,20 @@ def compute_rsi(prices, window=14):
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
 
-    # Pad initial values to match length of prices
+    #pad initial values to match length of prices
     rsi = np.concatenate([np.full(window, np.nan), rsi])
     return rsi
 
 data['RSI'] = compute_rsi(data['Close'].values)
 
-# Drop initial NaNs caused by RSI computation
+#drop initial NaNs caused by RSI computation
 data = data.dropna()
 
-# === 3. Scale RSI Data ===
+#scale RSI data
 scaler = MinMaxScaler(feature_range=(0, 1))
 rsi_scaled = scaler.fit_transform(data['RSI'].values.reshape(-1, 1))
 
-# === 4. Create Sequences for LSTM Training ===
+#create training sequences for LSTM
 def create_sequences(data, window_size=50):
     X, y = [], []
     for i in range(len(data) - window_size):
@@ -45,29 +45,29 @@ def create_sequences(data, window_size=50):
 
 X, y = create_sequences(rsi_scaled)
 
-# === 5. Train/Test Split ===
+#train/test split
 train_size = int(len(X) * 0.8)
 X_train, X_test = X[:train_size], X[train_size:]
 y_train, y_test = y[:train_size], y[train_size:]
 
-# === 6. Build LSTM Model ===
+#build LSTM model
 model = Sequential()
 model.add(LSTM(units=50, return_sequences=False, input_shape=(X.shape[1], 1)))
 model.add(Dense(1))
 
 model.compile(optimizer='adam', loss='mean_squared_error')
 
-# === 7. Train Model ===
+#train Model
 model.fit(X_train, y_train, epochs=25, batch_size=32, verbose=1)
 
-# === 8. Make Predictions ===
+#make predictions
 y_pred = model.predict(X_test)
 
-# Inverse transform back to RSI scale
+#inverse transform back to RSI scale
 y_test_rescaled = scaler.inverse_transform(y_test)
 y_pred_rescaled = scaler.inverse_transform(y_pred)
 
-# === 9. Plot Actual vs Predicted RSI ===
+#plot actual vs predicted RSI
 plt.figure(figsize=(12, 6))
 plt.plot(data.index[-len(y_test):], y_test_rescaled, label='Actual RSI', color='green')
 plt.plot(data.index[-len(y_test):], y_pred_rescaled, label='Predicted RSI', color='red')
@@ -79,5 +79,3 @@ plt.show()
 
 #plot actual vs predicted prices
 
-
-#

@@ -10,7 +10,7 @@ import os
 # === Parameters ===
 tickers = ['AAPL', 'MSFT', 'WF', 'SBUX', 'TASK']
 start_date = '2020-01-01'
-end_date = '2024-01-01'
+end_date = '2025-03-14'
 rsi_window = 14
 sequence_length = 50
 epochs = 25

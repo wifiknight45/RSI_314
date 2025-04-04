@@ -1,3 +1,6 @@
+Sure, here is the updated code with the input validation function added:
+
+```python
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -6,6 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 import os
+import re
 
 # === Parameters ===
 tickers = ['AAPL', 'MSFT', 'WF', 'SBUX', 'TASK']
@@ -15,6 +19,11 @@ rsi_window = 14
 sequence_length = 50
 epochs = 25
 batch_size = 32
+
+# === Input Validation Function ===
+def validate_ticker(ticker):
+    if not re.match("^[A-Za-z0-9]+$", ticker):
+        raise ValueError("Invalid ticker format. Please use alphanumeric characters only.")
 
 # === RSI Calculation Function ===
 def compute_rsi(prices, window=14):
@@ -44,62 +53,72 @@ os.makedirs('rsi_predictions', exist_ok=True)
 
 # === Process Each Ticker ===
 for ticker in tickers:
-    print(f"\nProcessing {ticker}...")
+    try:
+        # === Validate Input ===
+        validate_ticker(ticker) 
 
-    # === Download Data ===
-    data = yf.download(ticker, start=start_date, end=end_date)
+        print(f"\nProcessing {ticker}...")
 
-    # === Compute RSI ===
-    data['RSI'] = compute_rsi(data['Close'].values, window=rsi_window)
-    data = data.dropna()
+        # === Download Data ===
+        data = yf.download(ticker, start=start_date, end=end_date)
 
-    # === Scale RSI ===
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    rsi_scaled = scaler.fit_transform(data['RSI'].values.reshape(-1, 1))
+        # === Compute RSI ===
+        data['RSI'] = compute_rsi(data['Close'].values, window=rsi_window)
+        data = data.dropna()
 
-    # === Prepare Data for LSTM ===
-    X, y = create_sequences(rsi_scaled, sequence_length)
+        # === Scale RSI ===
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        rsi_scaled = scaler.fit_transform(data['RSI'].values.reshape(-1, 1))
 
-    # Train/Test Split
-    train_size = int(len(X) * 0.8)
-    X_train, X_test = X[:train_size], X[train_size:]
-    y_train, y_test = y[:train_size], y[train_size:]
+        # === Prepare Data for LSTM ===
+        X, y = create_sequences(rsi_scaled, sequence_length)
 
-    # === Build LSTM Model ===
-    model = Sequential()
-    model.add(LSTM(units=50, return_sequences=False, input_shape=(sequence_length, 1)))
-    model.add(Dense(1))
-    model.compile(optimizer='adam', loss='mean_squared_error')
+        # Train/Test Split
+        train_size = int(len(X) * 0.8)
+        X_train, X_test = X[:train_size], X[train_size:]
+        y_train, y_test = y[:train_size], y[train_size:]
 
-    # === Train Model ===
-    model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=1)
+        # === Build LSTM Model ===
+        model = Sequential()
+        model.add(LSTM(units=50, return_sequences=False, input_shape=(sequence_length, 1)))
+        model.add(Dense(1))
+        model.compile(optimizer='adam', loss='mean_squared_error')
 
-    # === Predict RSI ===
-    y_pred = model.predict(X_test)
+        # === Train Model ===
+        model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=1)
 
-    # === Inverse Transform Predictions ===
-    y_test_rescaled = scaler.inverse_transform(y_test)
-    y_pred_rescaled = scaler.inverse_transform(y_pred)
+        # === Predict RSI ===
+        y_pred = model.predict(X_test)
 
-    # === Save Predictions to CSV ===
-    prediction_df = pd.DataFrame({
-        'Date': data.index[-len(y_test):],
-        'Actual_RSI': y_test_rescaled.flatten(),
-        'Predicted_RSI': y_pred_rescaled.flatten()
-    })
-    prediction_df.to_csv(f'rsi_predictions/{ticker}_rsi_predictions.csv', index=False)
+        # === Inverse Transform Predictions ===
+        y_test_rescaled = scaler.inverse_transform(y_test)
+        y_pred_rescaled = scaler.inverse_transform(y_pred)
 
-    # === Plot Actual vs Predicted RSI ===
-    plt.figure(figsize=(12, 6))
-    plt.plot(prediction_df['Date'], prediction_df['Actual_RSI'], label='Actual RSI', color='green')
-    plt.plot(prediction_df['Date'], prediction_df['Predicted_RSI'], label='Predicted RSI', color='red')
-    plt.axhline(70, color='orange', linestyle='--', label='Overbought (70)')
-    plt.axhline(30, color='purple', linestyle='--', label='Oversold (30)')
-    plt.title(f'{ticker} RSI Prediction using LSTM')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+        # === Save Predictions to CSV ===
+        prediction_df = pd.DataFrame({
+            'Date': data.index[-len(y_test):],
+            'Actual_RSI': y_test_rescaled.flatten(),
+            'Predicted_RSI': y_pred_rescaled.flatten()
+        })
+        prediction_df.to_csv(f'rsi_predictions/{ticker}_rsi_predictions.csv', index=False)
 
-    print(f"Predictions for {ticker} saved to 'rsi_predictions/{ticker}_rsi_predictions.csv'")
+        # === Plot Actual vs Predicted RSI ===
+        plt.figure(figsize=(12, 6))
+        plt.plot(prediction_df['Date'], prediction_df['Actual_RSI'], label='Actual RSI', color='green')
+        plt.plot(prediction_df['Date'], prediction_df['Predicted_RSI'], label='Predicted RSI', color='red')
+        plt.axhline(70, color='orange', linestyle='--', label='Overbought (70)')
+        plt.axhline(30, color='purple', linestyle='--', label='Oversold (30)')
+        plt.title(f'{ticker} RSI Prediction using LSTM')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+        print(f"Predictions for {ticker} saved to 'rsi_predictions/{ticker}_rsi_predictions.csv'")
+    
+    except ValueError as e:
+        print(f"Skipping {ticker}: {e}")
+    except Exception as e:
+        print(f"An error occurred while processing {ticker}: {e}")
 
 print("\nAll stocks processed!")
+```

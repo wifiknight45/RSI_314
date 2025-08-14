@@ -1,5 +1,6 @@
-# RSI_314
-python code for LSTM model that uses RSI (Relative Strength Index) function financial data integrated from PostgreSQL. This tool is not intended for use as a standalone source of data but rather as tool in concert with data indicators to provide a more holistic view. this tool was developed using multiple forms of AGI to be used to teach python and understand the syntax and how that works with regards to training a LTSM (neural network). Any questions or comments are greatly appreciated. Feel free to share or mod etc. 
+# RSI_314 is currently under development check back for updates
+
+python logic for LSTM model that uses RSI (Relative Strength Index) function financial data integrated from PostgreSQL. This tool is not intended for use as a standalone source of data but rather as tool in concert with data indicators to provide a more holistic view. this tool was developed using multiple forms of AGI to be used to teach python and understand the syntax and how that works with regards to training a LTSM (neural network). Any questions or comments are greatly appreciated. Feel free to share or mod etc. 
 
 # Multi-Stock RSI Predictor using LSTM
 
